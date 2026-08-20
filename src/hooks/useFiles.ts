@@ -176,6 +176,8 @@ export function useFiles(
 	const handleFilesDragEvent = useCallback(
 		(ev: DragEvent) => {
 			if (!excalidrawAPI || !(ev instanceof DragEvent)) return
+			const target = ev.target
+			if (!(target instanceof Element) || !target.closest('.excalidraw')) return
 
 			const files = Array.from(ev.dataTransfer?.files || [])
 			const imageFiles = files.filter((file) => file.type.startsWith('image/'))
@@ -371,11 +373,9 @@ export function useFiles(
 	useEffect(() => {
 		if (!excalidrawAPI) return
 
-		// Set up drag event listener
-		const containerRef = document.querySelector<HTMLElement>('.excalidraw-wrapper')
-		if (containerRef) {
-			containerRef.addEventListener('drop', handleFilesDragEvent, true)
-		}
+		// The Nextcloud Viewer can replace the whiteboard mount node while opening
+		// a file. Listen on the stable document root and filter events to Excalidraw.
+		document.addEventListener('drop', handleFilesDragEvent, true)
 
 		// Set up pointer down handler for file download
 		const pointerDownHandler = async (_activeTool, state) => {
@@ -395,9 +395,7 @@ export function useFiles(
 
 		return () => {
 			// Clean up event listeners
-			if (containerRef) {
-				containerRef.removeEventListener('drop', handleFilesDragEvent, true)
-			}
+			document.removeEventListener('drop', handleFilesDragEvent, true)
 
 			// Hide any download button on cleanup
 			hideDownloadButton()
