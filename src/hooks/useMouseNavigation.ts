@@ -31,10 +31,21 @@ export function useMouseNavigation(excalidrawAPI: ExcalidrawImperativeAPI | null
 			if (event.ctrlKey || event.metaKey) return
 			event.preventDefault()
 			event.stopImmediatePropagation()
-			const state = excalidrawAPI.getAppState()
-			const zoom = state.zoom?.value || 1
-			const nextZoom = Math.min(30, Math.max(0.1, zoom * Math.exp(-event.deltaY * 0.0015)))
-			excalidrawAPI.updateScene({ appState: { zoom: { value: nextZoom } } })
+
+			// Re-use Excalidraw's own Ctrl+wheel path. Besides scaling, it adjusts
+			// scrollX/scrollY around clientX/clientY, keeping the point under the
+			// cursor stable instead of zooming from the upper-left corner.
+			event.target?.dispatchEvent(new WheelEvent('wheel', {
+				bubbles: true,
+				cancelable: true,
+				clientX: event.clientX,
+				clientY: event.clientY,
+				deltaX: event.deltaX,
+				deltaY: event.deltaY,
+				deltaZ: event.deltaZ,
+				deltaMode: event.deltaMode,
+				ctrlKey: true,
+			}))
 		}
 		const onPointerDown = (event: PointerEvent) => {
 			if (event.button !== 2) return
