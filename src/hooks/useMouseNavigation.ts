@@ -3,12 +3,13 @@ import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types/types
 
 /**
  * Desktop navigation tailored for a document-style whiteboard:
- * wheel pans, Ctrl+wheel retains Excalidraw zoom, and right-drag pans.
+ * wheel zooms, Ctrl+wheel retains Excalidraw zoom, and right-drag pans.
  *
  * @param excalidrawAPI active Excalidraw instance
  */
 export function useMouseNavigation(excalidrawAPI: ExcalidrawImperativeAPI | null) {
 	const dragging = useRef<{ x: number, y: number } | null>(null)
+	const suppressNextContextMenu = useRef(false)
 
 	useEffect(() => {
 		if (!excalidrawAPI) return
@@ -30,21 +31,28 @@ export function useMouseNavigation(excalidrawAPI: ExcalidrawImperativeAPI | null
 			if (event.ctrlKey || event.metaKey) return
 			event.preventDefault()
 			event.stopImmediatePropagation()
-			pan(event.deltaX, event.deltaY)
+			const state = excalidrawAPI.getAppState()
+			const zoom = state.zoom?.value || 1
+			const nextZoom = Math.min(30, Math.max(0.1, zoom * Math.exp(-event.deltaY * 0.0015)))
+			excalidrawAPI.updateScene({ appState: { zoom: { value: nextZoom } } })
 		}
 		const onPointerDown = (event: PointerEvent) => {
 			if (event.button !== 2) return
 			event.preventDefault()
 			event.stopImmediatePropagation()
+			suppressNextContextMenu.current = false
 			dragging.current = { x: event.clientX, y: event.clientY }
 		}
 		const onPointerMove = (event: PointerEvent) => {
 			if (!dragging.current) return
 			const previous = dragging.current
 			dragging.current = { x: event.clientX, y: event.clientY }
+			if (event.clientX !== previous.x || event.clientY !== previous.y) {
+				suppressNextContextMenu.current = true
+			}
 			event.preventDefault()
 			event.stopImmediatePropagation()
-			pan(event.clientX - previous.x, event.clientY - previous.y)
+			pan(previous.x - event.clientX, previous.y - event.clientY)
 		}
 		const stopRightDrag = (event: PointerEvent) => {
 			if (!dragging.current) return
@@ -52,7 +60,12 @@ export function useMouseNavigation(excalidrawAPI: ExcalidrawImperativeAPI | null
 			event.stopImmediatePropagation()
 			dragging.current = null
 		}
-		const preventContextMenu = (event: MouseEvent) => event.preventDefault()
+		const preventContextMenu = (event: MouseEvent) => {
+			if (!suppressNextContextMenu.current) return
+			event.preventDefault()
+			event.stopImmediatePropagation()
+			suppressNextContextMenu.current = false
+		}
 
 		container.addEventListener('wheel', onWheel, { capture: true, passive: false })
 		container.addEventListener('pointerdown', onPointerDown, true)
