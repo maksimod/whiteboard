@@ -372,11 +372,9 @@ export function useFiles(
 		if (!excalidrawAPI) return
 
 		// Set up drag event listener
-		const containerRef = document.getElementsByClassName(
-			'excalidraw-container',
-		)[0]
+		const containerRef = document.querySelector<HTMLElement>('.excalidraw-wrapper')
 		if (containerRef) {
-			containerRef.addEventListener('drop', handleFilesDragEvent)
+			containerRef.addEventListener('drop', handleFilesDragEvent, true)
 		}
 
 		// Set up pointer down handler for file download
@@ -398,7 +396,7 @@ export function useFiles(
 		return () => {
 			// Clean up event listeners
 			if (containerRef) {
-				containerRef.removeEventListener('drop', handleFilesDragEvent)
+				containerRef.removeEventListener('drop', handleFilesDragEvent, true)
 			}
 
 			// Hide any download button on cleanup

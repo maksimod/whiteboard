@@ -12,7 +12,7 @@ export function useMouseNavigation(excalidrawAPI: ExcalidrawImperativeAPI | null
 
 	useEffect(() => {
 		if (!excalidrawAPI) return
-		const container = document.getElementsByClassName('excalidraw-container')[0]
+		const container = document.querySelector<HTMLElement>('.excalidraw-wrapper')
 		if (!container) return
 
 		const pan = (deltaX: number, deltaY: number) => {
