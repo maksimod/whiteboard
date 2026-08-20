@@ -141,28 +141,38 @@ export function useFiles(
 		const elements = excalidrawAPI.getSceneElementsIncludingDeleted().slice()
 		const columns = Math.ceil(Math.sqrt(accepted.length))
 		const gap = 32
-
-		for (const [index, source] of accepted.entries()) {
+		const prepared = await Promise.all(accepted.map(async (source) => {
 			const dataURL = await readFileAsDataURL(source)
 			const dimensions = await getImageDimensions(dataURL)
 			const scale = Math.min(1, 640 / Math.max(dimensions.width, dimensions.height))
 			const width = Math.max(1, Math.round(dimensions.width * scale))
 			const height = Math.max(1, Math.round(dimensions.height * scale))
 			const id = crypto.randomUUID() as FileId
-			const file: BinaryFileData = {
-				id,
-				mimeType: source.type,
-				dataURL,
-				created: Date.now(),
+			return {
+				width,
+				height,
+				file: {
+					id,
+					mimeType: source.type,
+					dataURL,
+					created: Date.now(),
+				} satisfies BinaryFileData,
 			}
+		}))
+		const filesById = Object.fromEntries(prepared.map(({ file }) => [file.id, file]))
 
-			addFile(file)
-			await sendImageFiles({ [id]: file })
+		// Upload the full batch in one collaboration message. The promise returned by
+		// sendImageFiles may remain pending until the next sync acknowledgement, so
+		// awaiting it per image stops a multi-file drop after the first file.
+		for (const { file } of prepared) addFile(file)
+		sendImageFiles(filesById).catch(console.error)
+
+		for (const [index, { file, width, height }] of prepared.entries()) {
 			const column = index % columns
 			const row = Math.floor(index / columns)
 			elements.push(...convertToExcalidrawElements([{
 				type: 'image',
-				fileId: id,
+				fileId: file.id,
 				x: origin.x + column * (640 + gap),
 				y: origin.y + row * (480 + gap),
 				width,
