@@ -55,6 +55,7 @@ import { useVoting } from './hooks/useVoting'
 import { useContextMenuFilter } from './hooks/useContextMenuFilter'
 import { useDisableExternalLibraries } from './hooks/useDisableExternalLibraries'
 import { callMobileMessage } from './utils/mobileInterface'
+import { useMouseNavigation } from './hooks/useMouseNavigation'
 
 const Excalidraw = memo(ExcalidrawComponent)
 
@@ -165,6 +166,7 @@ export default function App({
 
 	useContextMenuFilter(excalidrawAPI)
 	useDisableExternalLibraries()
+	useMouseNavigation(excalidrawAPI)
 
 	useEffect(() => {
 		const handleVideoError = (e: Event) => {

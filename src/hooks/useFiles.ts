@@ -33,6 +33,24 @@ export interface FileHandlerInterface {
 	sendImageFiles: (files: Record<string, BinaryFileData>) => void
 }
 
+function readFileAsDataURL(file: File): Promise<DataURL> {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader()
+		reader.onerror = () => reject(reader.error)
+		reader.onload = () => resolve(reader.result as DataURL)
+		reader.readAsDataURL(file)
+	})
+}
+
+function getImageDimensions(dataURL: DataURL): Promise<{ width: number, height: number }> {
+	return new Promise((resolve, reject) => {
+		const image = new Image()
+		image.onerror = () => reject(new Error('Unable to read dropped image dimensions'))
+		image.onload = () => resolve({ width: image.naturalWidth || image.width, height: image.naturalHeight || image.height })
+		image.src = dataURL
+	})
+}
+
 export function useFiles(
 	sendImageFiles: (files: Record<string, BinaryFileData>) => Promise<void>,
 ) {
@@ -102,15 +120,77 @@ export function useFiles(
 		[excalidrawAPI],
 	)
 
+	const insertDroppedImages = useCallback(async (files: File[], clientX: number, clientY: number) => {
+		if (!excalidrawAPI) return
+
+		const maxFileSize = Number(loadState('whiteboard', 'maxFileSize', 10))
+		const accepted = files.filter((file) => file.size <= maxFileSize * 1024 * 1024)
+		if (accepted.length !== files.length) {
+			excalidrawAPI.setToast({
+				message: `Some images exceed the ${maxFileSize} MB limit and were skipped`,
+				closable: true,
+				duration: 5000,
+			})
+		}
+		if (accepted.length === 0) return
+
+		const origin = viewportCoordsToSceneCoords(
+			{ clientX, clientY },
+			excalidrawAPI.getAppState(),
+		)
+		const elements = excalidrawAPI.getSceneElementsIncludingDeleted().slice()
+		const columns = Math.ceil(Math.sqrt(accepted.length))
+		const gap = 32
+
+		for (const [index, source] of accepted.entries()) {
+			const dataURL = await readFileAsDataURL(source)
+			const dimensions = await getImageDimensions(dataURL)
+			const scale = Math.min(1, 640 / Math.max(dimensions.width, dimensions.height))
+			const width = Math.max(1, Math.round(dimensions.width * scale))
+			const height = Math.max(1, Math.round(dimensions.height * scale))
+			const id = crypto.randomUUID() as FileId
+			const file: BinaryFileData = {
+				id,
+				mimeType: source.type,
+				dataURL,
+				created: Date.now(),
+			}
+
+			addFile(file)
+			await sendImageFiles({ [id]: file })
+			const column = index % columns
+			const row = Math.floor(index / columns)
+			elements.push(...convertToExcalidrawElements([{
+				type: 'image',
+				fileId: id,
+				x: origin.x + column * (640 + gap),
+				y: origin.y + row * (480 + gap),
+				width,
+				height,
+			}]))
+		}
+
+		excalidrawAPI.updateScene({ elements })
+	}, [addFile, excalidrawAPI, sendImageFiles])
+
 	const handleFilesDragEvent = useCallback(
 		(ev: DragEvent) => {
 			if (!excalidrawAPI || !(ev instanceof DragEvent)) return
 
-			for (const file of Array.from(ev.dataTransfer?.files || [])) {
+			const files = Array.from(ev.dataTransfer?.files || [])
+			const imageFiles = files.filter((file) => file.type.startsWith('image/'))
+			if (imageFiles.length > 1) {
+				ev.preventDefault()
+				ev.stopImmediatePropagation()
+				insertDroppedImages(imageFiles, ev.clientX, ev.clientY).catch(console.error)
+				return
+			}
+
+			for (const file of files) {
 				handleFileInsert(file, ev)
 			}
 		},
-		[excalidrawAPI],
+		[excalidrawAPI, insertDroppedImages],
 	)
 
 	const handleFileInsert = useCallback(
