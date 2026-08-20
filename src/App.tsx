@@ -56,6 +56,7 @@ import { useContextMenuFilter } from './hooks/useContextMenuFilter'
 import { useDisableExternalLibraries } from './hooks/useDisableExternalLibraries'
 import { callMobileMessage } from './utils/mobileInterface'
 import { useMouseNavigation } from './hooks/useMouseNavigation'
+import { useFiles } from './hooks/useFiles'
 
 const Excalidraw = memo(ExcalidrawComponent)
 
@@ -167,6 +168,9 @@ export default function App({
 	useContextMenuFilter(excalidrawAPI)
 	useDisableExternalLibraries()
 	useMouseNavigation(excalidrawAPI)
+	// File binaries added by this hook are persisted by the regular onChange sync.
+	// The callback is retained for compatibility with the hook's legacy interface.
+	useFiles(async () => {})
 
 	useEffect(() => {
 		const handleVideoError = (e: Event) => {
