@@ -143,11 +143,7 @@ export function useFiles(
 		}))
 		const filesById = Object.fromEntries(prepared.map(({ file }) => [file.id, file]))
 
-		// Upload the full batch in one collaboration message. The promise returned by
-		// sendImageFiles may remain pending until the next sync acknowledgement, so
-		// awaiting it per image stops a multi-file drop after the first file.
 		for (const { file } of prepared) addFile(file)
-		sendImageFiles(filesById).catch(console.error)
 
 		for (const [index, { file, width, height }] of prepared.entries()) {
 			const column = index % columns
@@ -163,6 +159,11 @@ export function useFiles(
 		}
 
 		excalidrawAPI.updateScene({ elements })
+		// Programmatic scene updates do not reliably invoke Excalidraw's onChange.
+		// Wait for Excalidraw to commit the scene, then trigger one explicit sync
+		// after both the binary files and their image elements are present.
+		await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+		sendImageFiles(filesById).catch(console.error)
 	}, [addFile, excalidrawAPI, sendImageFiles])
 
 	const handleFilesDragEvent = useCallback(

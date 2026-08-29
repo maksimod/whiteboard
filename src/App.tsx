@@ -168,9 +168,7 @@ export default function App({
 	useContextMenuFilter(excalidrawAPI)
 	useDisableExternalLibraries()
 	useMouseNavigation(excalidrawAPI)
-	// File binaries added by this hook are persisted by the regular onChange sync.
-	// The callback is retained for compatibility with the hook's legacy interface.
-	useFiles(async () => {})
+	useFiles(async () => onChangeSync())
 
 	useEffect(() => {
 		const handleVideoError = (e: Event) => {

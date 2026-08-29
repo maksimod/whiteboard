@@ -85,6 +85,8 @@ function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
  * Prepare a newly inserted raster image for the whiteboard. Large images are
  * resized and encoded as high-quality WebP, while small, animated, vector, or
  * unsuccessfully encoded images keep their original bytes.
+ *
+ * @param file Newly inserted browser image file.
  */
 export async function prepareImageForWhiteboard(file: File): Promise<PreparedImage> {
 	const originalDataURL = await readBlobAsDataURL(file)
