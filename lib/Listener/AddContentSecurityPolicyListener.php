@@ -34,11 +34,8 @@ class AddContentSecurityPolicyListener implements IEventListener {
 		}
 
 		$domains = $this->configService->getCollabBackendCspConnectDomains();
-		if ($domains === []) {
-			return;
-		}
-
 		$policy = new EmptyContentSecurityPolicy();
+		$policy->addAllowedWorkerSrcDomain("'self'");
 		foreach ($domains as $domain) {
 			$policy->addAllowedConnectDomain($domain);
 		}
