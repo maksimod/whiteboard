@@ -272,8 +272,9 @@ To size dedicated collaboration servers we profiled the websocket backend with t
   up to five minutes of clock skew and refreshes tokens five minutes before
   expiry, but the operating-system time service should still be enabled.
 - A successful token refresh or WebSocket handshake clears any prior temporary
-  authentication notification. If the notice remains, reload the board once to
-  obtain the current client bundle.
+  authentication notification. Every deployment that changes an immutable
+  chunk must publish it under a new hashed filename and update the main-module
+  import map, so a reload cannot reuse the prior client bundle.
 - Check that user browsers can access the websocket server URL
 - Ensure reverse proxy correctly handles WebSocket upgrades
 - Check browser console for connection errors
