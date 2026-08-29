@@ -362,12 +362,9 @@ export const useJWTStore = create<JWTStore>()(
 						`[JWTStore] JWT refreshed for room ${fileId}, expires at ${new Date(payload.exp * 1000).toISOString()}`,
 					)
 
-					// Only clear auth errors if this was not a JWT secret mismatch
-					// If it was a JWT secret mismatch, the new token will also fail validation
-					const { authError } = useCollaborationStore.getState()
-					if (authError.type !== 'jwt_secret_mismatch') {
-						useCollaborationStore.getState().clearAuthError()
-					}
+					// A newly issued, structurally valid token supersedes a stale
+					// authentication error left by the previous token.
+					useCollaborationStore.getState().clearAuthError()
 
 					// Update read-only state based on the new JWT
 					if (payload.isFileReadOnly !== undefined) {
@@ -438,11 +435,8 @@ export const useJWTStore = create<JWTStore>()(
 
 					const result = await apiCall(token)
 
-					// Only clear auth errors if this was not a JWT secret mismatch
-					const { authError } = useCollaborationStore.getState()
-					if (authError.type !== 'jwt_secret_mismatch') {
-						useCollaborationStore.getState().clearAuthError()
-					}
+					// A successful authenticated API call proves this token is usable.
+					useCollaborationStore.getState().clearAuthError()
 
 					return result
 				} catch (error) {

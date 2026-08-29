@@ -750,12 +750,9 @@ export function useCollaboration() {
 				setStatus('online')
 				setIsInRoom(false) // not joined yet
 
-				// Only clear auth errors if this was not a JWT secret mismatch
-				// JWT secret mismatch is a persistent configuration issue that won't be resolved by connection success
-				const { authError } = useCollaborationStore.getState()
-				if (authError.type !== 'jwt_secret_mismatch') {
-					clearAuthError()
-				}
+				// A completed Socket.IO handshake proves that the current JWT was accepted.
+				// Clear a stale error left by a failed, expired token before the refresh.
+				clearAuthError()
 
 				// Reset room join tracking on new connection
 				joinedRoomRef.current = null
@@ -792,11 +789,8 @@ export function useCollaboration() {
 				setStatus('online')
 				setIsInRoom(false) // will join again
 
-				// Clear auth errors since we're successfully reconnected
-				const { authError } = useCollaborationStore.getState()
-				if (authError.type !== 'jwt_secret_mismatch') {
-					clearAuthError()
-				}
+				// A successful reconnect proves the refreshed JWT was accepted.
+				clearAuthError()
 
 				// Reset room join tracking on reconnect
 				joinedRoomRef.current = null
@@ -839,11 +833,8 @@ export function useCollaboration() {
 					console.log(`[Collaboration] Fallback: Setting status to online based on init-room + socket.connected (was: ${currentStatus})`)
 					setStatus('online')
 
-					// Clear auth errors since we're successfully connected
-					const { authError } = useCollaborationStore.getState()
-					if (authError.type !== 'jwt_secret_mismatch') {
-						clearAuthError()
-					}
+					// init-room is sent only after a successful Socket.IO handshake.
+					clearAuthError()
 				}
 
 				// This is the primary trigger for joining a room - the server sends this event
