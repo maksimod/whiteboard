@@ -18,6 +18,7 @@ import type { FileId } from '@excalidraw/excalidraw/types/element/types'
 import axios from '@nextcloud/axios'
 import { loadState } from '@nextcloud/initial-state'
 import { useExcalidrawStore } from '../stores/useExcalidrawStore'
+import { prepareImageForWhiteboard } from '../utils/optimizeImage'
 import { useSidebarDownload } from './useSidebarDownload'
 
 export type Meta = {
@@ -31,24 +32,6 @@ export type Meta = {
 export interface FileHandlerInterface {
 	addFile: (file: BinaryFileData) => void
 	sendImageFiles: (files: Record<string, BinaryFileData>) => void
-}
-
-function readFileAsDataURL(file: File): Promise<DataURL> {
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader()
-		reader.onerror = () => reject(reader.error)
-		reader.onload = () => resolve(reader.result as DataURL)
-		reader.readAsDataURL(file)
-	})
-}
-
-function getImageDimensions(dataURL: DataURL): Promise<{ width: number, height: number }> {
-	return new Promise((resolve, reject) => {
-		const image = new Image()
-		image.onerror = () => reject(new Error('Unable to read dropped image dimensions'))
-		image.onload = () => resolve({ width: image.naturalWidth || image.width, height: image.naturalHeight || image.height })
-		image.src = dataURL
-	})
 }
 
 export function useFiles(
@@ -142,19 +125,18 @@ export function useFiles(
 		const columns = Math.ceil(Math.sqrt(accepted.length))
 		const gap = 32
 		const prepared = await Promise.all(accepted.map(async (source) => {
-			const dataURL = await readFileAsDataURL(source)
-			const dimensions = await getImageDimensions(dataURL)
-			const scale = Math.min(1, 640 / Math.max(dimensions.width, dimensions.height))
-			const width = Math.max(1, Math.round(dimensions.width * scale))
-			const height = Math.max(1, Math.round(dimensions.height * scale))
+			const preparedImage = await prepareImageForWhiteboard(source)
+			const scale = Math.min(1, 640 / Math.max(preparedImage.width, preparedImage.height))
+			const width = Math.max(1, Math.round(preparedImage.width * scale))
+			const height = Math.max(1, Math.round(preparedImage.height * scale))
 			const id = crypto.randomUUID() as FileId
 			return {
 				width,
 				height,
 				file: {
 					id,
-					mimeType: source.type,
-					dataURL,
+					mimeType: preparedImage.mimeType,
+					dataURL: preparedImage.dataURL,
 					created: Date.now(),
 				} satisfies BinaryFileData,
 			}
@@ -191,7 +173,7 @@ export function useFiles(
 
 			const files = Array.from(ev.dataTransfer?.files || [])
 			const imageFiles = files.filter((file) => file.type.startsWith('image/'))
-			if (imageFiles.length > 1) {
+			if (imageFiles.length > 0 && imageFiles.length === files.length) {
 				ev.preventDefault()
 				ev.stopImmediatePropagation()
 				insertDroppedImages(imageFiles, ev.clientX, ev.clientY).catch(console.error)
