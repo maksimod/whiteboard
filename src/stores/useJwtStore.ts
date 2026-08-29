@@ -13,7 +13,11 @@ import { generateUrl } from '@nextcloud/router'
 import { useWhiteboardConfigStore } from './useWhiteboardConfigStore'
 import { useCollaborationStore } from './useCollaborationStore'
 
-const TOKEN_REFRESH_BUFFER = 90
+// JWTs are issued by Nextcloud while their expiry is checked by the
+// collaboration server. Give clients enough room for a normally drifting
+// workstation clock to refresh before the server considers a token expired.
+const TOKEN_REFRESH_BUFFER = 5 * 60
+const MAX_CLOCK_SKEW = 5 * 60
 
 function isTokenFormatValid(token: string): boolean {
 	const parts = token.split('.')
@@ -126,7 +130,7 @@ export const useJWTStore = create<JWTStore>()(
 					}
 
 					// Check if token was issued in the past (not future)
-					if (payload.iat > now + 60) { // Allow 60 seconds clock skew
+					if (payload.iat > now + MAX_CLOCK_SKEW) {
 						console.warn('[JWTStore] Token validation failed: issued in future')
 						return false
 					}
