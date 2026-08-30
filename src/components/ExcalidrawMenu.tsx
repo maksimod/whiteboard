@@ -6,8 +6,9 @@
 import { useCallback, useEffect, useRef, memo } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Icon } from '@mdi/react'
-import { mdiMonitorScreenshot, mdiImageMultiple, mdiTimerOutline, mdiVote, mdiGrid, mdiMagnify } from '@mdi/js'
+import { mdiMonitorScreenshot, mdiImageMultiple, mdiTimerOutline, mdiVote, mdiGrid, mdiMagnify, mdiShareVariantOutline } from '@mdi/js'
 import { MainMenu, CaptureUpdateAction } from '@nextcloud/excalidraw'
+import { generateUrl } from '@nextcloud/router'
 import { RecordingMenuItem } from './Recording'
 import { PresentationMenuItem } from './Presentation'
 import { CreatorMenuItem } from './CreatorMenuItem'
@@ -19,7 +20,9 @@ import type { RecordingHookState } from '../types/recording'
 import type { PresentationState } from '../types/presentation'
 
 interface ExcalidrawMenuProps {
+	fileId: number
 	fileNameWithoutExtension: string
+	canShare: boolean
 	recordingState: RecordingHookState
 	presentationState: PresentationState
 	isTimerVisible: boolean
@@ -28,7 +31,7 @@ interface ExcalidrawMenuProps {
 	onToggleGrid: () => void
 }
 
-export const ExcalidrawMenu = memo(function ExcalidrawMenu({ fileNameWithoutExtension, recordingState, presentationState, isTimerVisible, onToggleTimer, gridModeEnabled, onToggleGrid }: ExcalidrawMenuProps) {
+export const ExcalidrawMenu = memo(function ExcalidrawMenu({ fileId, fileNameWithoutExtension, canShare, recordingState, presentationState, isTimerVisible, onToggleTimer, gridModeEnabled, onToggleGrid }: ExcalidrawMenuProps) {
 	const isMacPlatform = typeof navigator !== 'undefined' && (navigator.userAgentData?.platform === 'macOS' || /Mac|iPhone|iPad/.test(navigator.platform ?? ''))
 	const { excalidrawAPI } = useExcalidrawStore(useShallow(state => ({
 		excalidrawAPI: state.excalidrawAPI,
@@ -54,6 +57,18 @@ export const ExcalidrawMenu = memo(function ExcalidrawMenu({ fileNameWithoutExte
 			excalidrawContainer.dispatchEvent(event)
 		}
 	}, [isMacPlatform])
+
+	const openSharingDetails = useCallback(() => {
+		const fileUrl = generateUrl('/f/{fileId}', { fileId })
+		const sharingUrl = `${fileUrl}?opendetails=true&openfile=false`
+		const sharingWindow = window.open(sharingUrl, '_blank', 'noopener,noreferrer')
+
+		// Direct user interaction normally permits the new tab. Fall back to the
+		// current tab if a browser blocks it so the action still works.
+		if (!sharingWindow) {
+			window.location.assign(sharingUrl)
+		}
+	}, [fileId])
 
 	const takeScreenshot = useCallback(() => {
 		const canvas = document.querySelector('.excalidraw__canvas') as HTMLCanvasElement | null
@@ -179,6 +194,13 @@ export const ExcalidrawMenu = memo(function ExcalidrawMenu({ fileNameWithoutExte
 		<MainMenu>
 			<MainMenu.DefaultItems.ToggleTheme />
 			<MainMenu.DefaultItems.ChangeCanvasBackground />
+			{canShare && (
+				<MainMenu.Item
+					icon={<Icon path={mdiShareVariantOutline} size={0.75} />}
+					onSelect={openSharingDetails}>
+					{t('whiteboard', 'Share')}
+				</MainMenu.Item>
+			)}
 			<MainMenu.Item
 				icon={<Icon path={mdiImageMultiple} size={0.75} />}
 				onSelect={openExportDialog}

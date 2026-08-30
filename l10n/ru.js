@@ -7,6 +7,7 @@ OC.L10N.register(
     "Save settings" : "Сохранить изменения",
     "Advanced settings" : "Расширенные параметры",
     "Close" : "Закрыть",
+    "Share" : "Поделиться",
     "Generating…" : "Создание…",
     "Generate" : "Генерировать",
     "Add reaction" : "Добавить реакцию",

@@ -41,6 +41,9 @@ final class RegisterTemplateCreatorListener implements IEventListener {
 		$whiteboard = new TemplateFileCreator(Application::APP_ID, $l10n->t('New whiteboard'), '.whiteboard');
 		$whiteboard->addMimetype('application/vnd.excalidraw+json');
 		$whiteboard->addMimetype('application/octet-stream');
+		// Text uses order 10. Put Whiteboard immediately before it in Files and
+		// in template-based interfaces such as the Office overview.
+		$whiteboard->setOrder(5);
 
 		// Always use the custom SVG icon for consistency
 		$iconContent = file_get_contents(__DIR__ . '/../../img/app-filetype.svg');

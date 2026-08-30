@@ -591,7 +591,9 @@ export default function App({
 					</Sidebar>
 					{!isVersionPreview && (
 						<MemoizedExcalidrawMenu
+							fileId={normalizedFileId}
 							fileNameWithoutExtension={fileNameWithoutExtension}
+							canShare={publicSharingToken === null}
 							recordingState={recordingState}
 							presentationState={presentationState}
 							isTimerVisible={isTimerVisible}
